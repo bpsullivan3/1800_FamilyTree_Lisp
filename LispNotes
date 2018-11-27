@@ -1,0 +1,30 @@
+(setf a (list members))
+(member index a)
+(first/second/etc... (member index a))
+(if (member index))
+(if (setf found (member 3 a)) (print "Found!))
+
+(setf x (list (list 3 "hello")(list 4 "goodbye")))
+(setf lookfor (list 4 "Goodbye"))
+(member lookfor x :test #'equal)
+
+(setf x (cons element x)) #append onto list x
+(setf x (delete-duplicates x :test #'equal)) #delete duplicates
+
+(dolist (i x)) #for each, with i bound to each element on iteration
+(dolist (i 10)) #for each range 0-9
+(loop for i from 0 to 9 doing (print (* 2 i)))
+(loop for i in x doing (print (* 2 i)))
+(loop for i from -10 to 10 collecting i) #growing list in order of encounter
+
+(setf people-names (loop for p in people collecting (peron-name p))) #get names from list of people
+
+(format nil "~A" 'fred) #turn symbol into string
+
+;Looping in lisp using recursion
+(defun iter (fn list)
+    (when (not (null list)) 
+        (cons (funcall fn (first list))
+        (iter fn (rest list)))))
+
+(setf listvar (split-sequence:SPLIT-SEQUENCE #\Space STRINGVAR)) ;split string into list on space
