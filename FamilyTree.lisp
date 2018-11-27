@@ -79,6 +79,28 @@
   (loop for v being the hash-values of tree 
         doing (if (isunrelated p v tree) (append (person-name v)))))
 
+(defun split-str (string &optional (separator " "))
+  (split-str-1 string separator))
+
+(defun split-str-1 (string &optional (separator " ") (r nil))
+  (let ((n (position separator string
+		     :from-end t
+		     :test #'(lambda (x y)
+			       (find y x :test #'string=)))))
+    (if n
+	(split-str-1 (subseq string 0 n) separator (cons (subseq string (1+ n)) r)) 
+           (cons string r))))
+
 (defun family ()
   "This is the top-level function for the whole Lisp program."
-  (let ((tree (make-hash-table :size 1000 :test #'equal)))))
+  (let ((tree (make-hash-table :size 1000 :test #'equal)) (in (open *standard-input*)))
+    (when in
+      (loop for line = (read-line in nil)
+        while line doing 
+          (format t "~a~%" line)
+          (setf lineparts (split-str line))
+          (print lineparts)
+          ))
+    (close in)))
+
+(family)
