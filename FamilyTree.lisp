@@ -91,15 +91,31 @@
 	(split-str-1 (subseq string 0 n) separator (cons (subseq string (1+ n)) r)) 
            (cons string r))))
 
+(defun child-event (parent1 parent2 child) (print "Child event"))
+
+(defun marriage-event (person1 person2) (print "Marriage event"))
+
+(defun get-all-event (relation person) (print "Get-All event"))
+
+(defun is-a-event (person1 relation person2) (print "Is-A event"))
+
+(defun process-str (lineparts)
+  (cond ((and (string= (first lineparts) "E") (fourth lineparts)) 
+		(child-event (second lineparts) (third lineparts) (fourth lineparts)))
+	((and (string= (first lineparts) "E") (not (fourth lineparts)))
+		(marriage-event (second lineparts) (third lineparts)))
+	((string= (first lineparts) "W") (get-all-event (second lineparts) (third lineparts)))
+	((string= (first lineparts) "X") (is-a-event (second lineparts) (third lineparts) (fourth lineparts)))))
+
 (defun family ()
   "This is the top-level function for the whole Lisp program."
   (let ((tree (make-hash-table :size 1000 :test #'equal)) (in (open *standard-input*)))
     (when in
       (loop for line = (read-line in nil)
         while line doing 
-          (format t "~a~%" line)
-          (setf lineparts (split-str line))
-          (print lineparts)
+          ;(format t "~a~%" line) <-- Not needed with below split-str function
+          (let ((lineparts (split-str line)))
+          (process-str lineparts))
           ))
     (close in)))
 
