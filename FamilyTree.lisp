@@ -79,25 +79,25 @@
   (loop for v being the hash-values of tree 
         doing (if (isunrelated p v tree) (append (person-name v)))))
 
-(defun split-str (string &optional (separator " "))
-  (split-str-1 string separator))
+(defun form-str (string)
+  (split-str (remove #\( (remove #\) string))))
 
-(defun split-str-1 (string &optional (separator " ") (r nil))
+(defun split-str (string &optional (separator " ") (r nil))
   (let ((n (position separator string
 		     :from-end t
 		     :test #'(lambda (x y)
 			       (find y x :test #'string=)))))
     (if n
-	(split-str-1 (subseq string 0 n) separator (cons (subseq string (1+ n)) r)) 
+	(split-str (subseq string 0 n) separator (cons (subseq string (1+ n)) r)) 
            (cons string r))))
 
-(defun child-event (parent1 parent2 child) (print "Child event"))
+(defun child-event (parent1 parent2 child) (format t "E ~a ~a ~a~%" parent1 parent2 child))
 
-(defun marriage-event (person1 person2) (print "Marriage event"))
+(defun marriage-event (person1 person2) (format t "E ~a ~a~%" person1 person2))
 
-(defun get-all-event (relation person) (print "Get-All event"))
+(defun get-all-event (relation person) (format t "W ~a ~a~%" relation person))
 
-(defun is-a-event (person1 relation person2) (print "Is-A event"))
+(defun is-a-event (person1 relation person2) (format t "X ~a ~a ~a~%" person1 relation person2))
 
 (defun process-str (lineparts)
   (cond ((and (string= (first lineparts) "E") (fourth lineparts)) 
@@ -113,10 +113,8 @@
     (when in
       (loop for line = (read-line in nil)
         while line doing 
-          ;(format t "~a~%" line) <-- Not needed with below split-str function
-          (let ((lineparts (split-str line)))
-          (process-str lineparts))
-          ))
+	  (let ((lineparts (form-str line)))
+          (process-str lineparts))))
     (close in)))
 
 (family)
