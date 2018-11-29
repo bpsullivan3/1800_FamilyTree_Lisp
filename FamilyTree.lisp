@@ -16,30 +16,36 @@
   (gethash symbol-name family-tree nil))
 
 (defun addspouse (spouse-name p)
-  (setf (person-spouses p) (cons spouse-name (person-spouses p))))
+  (setf (person-spouses p) (cons spouse-name (person-spouses p)))
+  (setf (person-spouses p) (sort (person-spouses p) #'string<)))
 
 (defun addchild (child-name p)
-  (setf (person-children p) (cons child-name (person-children p))))
+  (setf (person-children p) (cons child-name (person-children p)))
+  (setf (person-children p) (sort (person-children p) #'string<)))
 
 (defun ancestors (p tree)
   "Returns a list of symbol-names of all the ancestors of P in TREE."
-   (let ((parent1 (personstruct (person-parent1 p) tree))
+   (let ((ancestors (list))
+         (parent1 (personstruct (person-parent1 p) tree))
          (parent2 (personstruct (person-parent2 p) tree)))
      (when parent1
          (append (list (person-name parent1) (person-name parent2))
                  (ancestors parent1 tree)
                  (ancestors parent2 tree))))
-   (setf ancestors (delete-duplicates ancestors :test #'equal)))
+   (setf ancestors (delete-duplicates ancestors :test #'equal))
+   (setf ancestors (sort ancestors :test #'string<)))
 
 (defun siblings (p tree)
   "Returns a list of symbol-names of all the siblings of P in TREE"
-  (let ((parent1 (personstruct (person-parent1 p) tree))
+  (let ((siblings (list))
+        (parent1 (personstruct (person-parent1 p) tree))
         (parent2 (personstruct (person-parent2 p) tree)))
     (when parent1
-      (append (loop for p in parent1-children collecting (person-name p))
-              (loop for p in parent2-children collecting (person-name p)))))
+      (loop for p in (person-children parent1) doing (cons p siblings))
+      (loop for p in (person-children parent2) doing (cons p siblings))
     (setf siblings (delete-duplicates siblings :test #'equal))
-    (setf siblings (remove (person-name p) siblings)))
+    (setf siblings (remove (person-name p) siblings))
+    (setf siblings (sort siblings :test #'string<)))))
 
 (defun ischild (p1 p2)
   "Returns a boolean value: True (t) if p1 is a child of p2, else False (nil)"
@@ -73,48 +79,81 @@
 
 (defun getcousins(p tree)
   (loop for v being the hash-values of tree 
-        doing (if (iscousin p v tree) (append (person-name v)))))
+        doing (if (iscousin p v tree) (append (person-name v))))
+  (setf getcousins (sort getcousins :test #'string<)))
 
 (defun getunrelated(p tree)
   (loop for v being the hash-values of tree 
-        doing (if (isunrelated p v tree) (append (person-name v)))))
+        doing (if (isunrelated p v tree) (append (person-name v))))
+  (setf getunrelated (sort getunrelated :test #'string<)))
 
-(defun form-str (string)
-  (split-str (remove #\( (remove #\) string))))
+(defun child-event (parent1 parent2 child tree) 
+  "Create & Marry the parent1 and parent2 if they arent already, then create child with those parents if child does not exist"
+  ;(format t "E ~a ~a ~a~%~%" parent1 parent2 child)
+  (let ((p1 (personstruct parent1 tree)) (p2 (personstruct parent2 tree)) (c (personstruct child tree)))
+     (if (not p1) (setf p1 (storeperson parent1 (make-person :name parent1) tree)))
+     (if (not p2) (setf p2 (storeperson parent2 (make-person :name parent2) tree)))
+     (if (not (isspouse p1 p2)) (addspouse (person-name p1) p2))
+     (if (not (isspouse p2 p1)) (addspouse (person-name p2) p1))
+     (when (not c) ; Do not make the child if it already exists 
+        (setf c (storeperson child (make-person :name child :parent1 parent1 :parent2 parent2) tree))
+        (addchild (person-name c) p1)
+        (addchild (person-name c) p2))))
 
-(defun split-str (string &optional (separator " ") (r nil))
-  (let ((n (position separator string
-		     :from-end t
-		     :test #'(lambda (x y)
-			       (find y x :test #'string=)))))
-    (if n
-	(split-str (subseq string 0 n) separator (cons (subseq string (1+ n)) r)) 
-           (cons string r))))
+(defun marriage-event (person1 person2 tree) 
+  "Marry person1 and person2, initializing them into existence if needed."
+  ;(format t "E ~a ~a~%~%" person1 person2) 
+  (let ((p1 (personstruct person1 tree)) (p2 (personstruct person2 tree)))
+    (if (not p1) (setf p1 (storeperson person1 (make-person :name person1) tree)))
+    (if (not p2) (setf p2 (storeperson person2 (make-person :name person2) tree)))
+    (if (not (isspouse p1 p2)) (addspouse (person-name p1) p2))
+    (if (not (isspouse p2 p1)) (addspouse (person-name p2) p1))))
 
-(defun child-event (parent1 parent2 child) (format t "E ~a ~a ~a~%" parent1 parent2 child))
+(defun get-all-event (relation person tree)
+  "Print out the query followed by a list of all people that are of the specified relation to person, one line at a time."
+  (format t "W ~a ~a~%" relation person)
+  (let ((p (personstruct person tree)))
+     (cond ((string= relation "SPOUSE") 
+               (loop for i in (person-spouses p) doing (format t "~a~%" i)))
+           ((string= relation "CHILD")
+               (loop for i in (person-children p) doing (format t "~a~%" i)))
+           ;((string= relation "ANCESTOR")
+               ;(loop for i in (ancestors p tree) doing (format t "~a~%" i)))
+           ;((string= relation "SIBLING")
+               ;(loop for i in (siblings p tree) doing (format t "~a~%" i)))
+           ((string= relation "COUSIN")
+               (loop for i in (getcousins p tree) doing (format t "~a~%" i)))
+           ((string= relation "UNRELATED")
+               (loop for i in (getunrelated p tree) doing (format t "~a~%" i))))
+  (format t "~%")))
 
-(defun marriage-event (person1 person2) (format t "E ~a ~a~%" person1 person2))
-
-(defun get-all-event (relation person) (format t "W ~a ~a~%" relation person))
-
-(defun is-a-event (person1 relation person2) (format t "X ~a ~a ~a~%" person1 relation person2))
-
-(defun process-str (lineparts)
-  (cond ((and (string= (first lineparts) "E") (fourth lineparts)) 
-		(child-event (second lineparts) (third lineparts) (fourth lineparts)))
-	((and (string= (first lineparts) "E") (not (fourth lineparts)))
-		(marriage-event (second lineparts) (third lineparts)))
-	((string= (first lineparts) "W") (get-all-event (second lineparts) (third lineparts)))
-	((string= (first lineparts) "X") (is-a-event (second lineparts) (third lineparts) (fourth lineparts)))))
+(defun is-a-event (person1 relation person2 tree) 
+  "Check if person1 is related to person2 by a specified relation. Prints out the query followed by 'Yes' or 'No'"
+  (format t "X ~a ~a ~a~%" person1 relation person2)
+  (let ((p1 (personstruct person1 tree)) (p2 (personstruct person2 tree)))
+     (cond ((string= relation "SPOUSE") 
+               (if (isspouse p1 p2) (format t "Yes~%") (format t "No~%")))
+           ((string= relation "CHILD")
+              (if (ischild p1 p2) (format t "Yes~%") (format t "No~%")))
+           ((string= relation "ANCESTOR")
+               (if (isancestor p1 p2) (format t "Yes~%") (format t "No~%")))
+           ((string= relation "SIBLING")
+              (if (issibling p1 p2) (format t "Yes~%") (format t "No~%")))
+           ((string= relation "COUSIN")
+               (if (iscousin p1 p2 tree) (format t "Yes~%") (format t "No~%")))
+           ((string= relation "UNRELATED")
+               (if (isunrelated p1 p2 tree) (format t "Yes~%") (format t "No~%"))))
+  (format t "~%")))
 
 (defun family ()
   "This is the top-level function for the whole Lisp program."
-  (let ((tree (make-hash-table :size 1000 :test #'equal)) (in (open *standard-input*)))
+  (let ((tree (make-hash-table :size 1000 :test #'equal)) (in *standard-input*))
     (when in
-      (loop for line = (read-line in nil)
-        while line doing 
-	  (let ((lineparts (form-str line)))
-          (process-str lineparts))))
-    (close in)))
-
-(family)
+      (loop for line = (read in nil)
+        while line doing
+          (cond ((and (string= (first line) "E") (fourth line)) 
+		    (child-event (second line) (third line) (fourth line) tree))
+	        ((and (string= (first line) "E") (not (fourth line)))
+		    (marriage-event (second line) (third line) tree))
+                ((string= (first line) "W") (get-all-event (second line) (third line) tree))
+                ((string= (first line) "X") (is-a-event (second line) (third line) (fourth line) tree)))))))
