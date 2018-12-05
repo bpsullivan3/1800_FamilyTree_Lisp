@@ -46,7 +46,7 @@
   (let ((child nil))
   (when (and p1 p2)
     (if (member (person-name p1) (person-children p2) :test #'equal) (setf child t)))
-  (if child t nil))) 
+  (if child t nil)))
 
 (defun isspouse (p1 p2)
   "Returns a boolean value: True (t) if p1 is a spouse of p2, else False (nil)"
@@ -121,19 +121,18 @@
   "Print out the query followed by a list of all people that are of the specified relation to person, one line at a time."
   (format t "W ~a ~a~%" relation person)
   (let ((p (personstruct person tree)))
-    (when p ;if person does not exist, nothing is returned
      (cond ((string= relation "SPOUSE") 
-               (loop for i in (person-spouses p) doing (format t "~a~%" i)))
+               (when p (loop for i in (person-spouses p) doing (format t "~a~%" i))))
            ((string= relation "CHILD")
-               (loop for i in (person-children p) doing (format t "~a~%" i)))
+               (when p (loop for i in (person-children p) doing (format t "~a~%" i))))
            ((string= relation "ANCESTOR")
-               (loop for i in (ancestors p tree) doing (format t "~a~%" i)))
+               (when p (loop for i in (ancestors p tree) doing (format t "~a~%" i))))
            ((string= relation "SIBLING")
-               (loop for i in (siblings p tree) doing (format t "~a~%" i)))
+               (when p (loop for i in (siblings p tree) doing (format t "~a~%" i))))
            ((string= relation "COUSIN")
-               (loop for i in (getcousins p tree) doing (format t "~a~%" i)))
+               (when p (loop for i in (getcousins p tree) doing (format t "~a~%" i))))
            ((string= relation "UNRELATED")
-               (loop for i in (getunrelated p tree) doing (format t "~a~%" i)))))
+               (loop for i in (getunrelated p tree) doing (format t "~a~%" i))))
   (format t "~%")))
 
 (defun is-a-event (person1 relation person2 tree) 
